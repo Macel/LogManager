@@ -70,7 +70,7 @@ Class ConsoleLogger : Logger {
             }
             $timestamp = (Get-Date).toString("yyyy/MM/dd HH:mm:ss")
             $line = "$timestamp`t$lvltxt`t$msg"
-            Write-Host $This.logFilePath -Value $line
+            Write-Host $line
         }
     }
 }
@@ -366,6 +366,66 @@ function Invoke-LogManagerFlush {
     end {
     }
 }
+
+<#
+.SYNOPSIS
+Creates a Console Logger to be managed by the Log Manager
+
+.DESCRIPTION
+Generates Logs that are written to the console window
+
+.PARAMETER logLevel
+The level threshold the logger will be triggered by.
+
+.PARAMETER LogManager
+The Log Manager object for managing all loggers.
+
+.EXAMPLE
+$LogManager = New-LogManager
+New-ConsoleLogger -Path "C:\Logfile.Log" -LogLevel "Info" -LogManager $LogManager
+New-Log -LogManager $Logmanager -Loglevel "Info" -Message "Hello World!"
+
+.NOTES
+Created 2017-05-23 11:09:07
+#>
+function New-ConsoleLogger {
+    [CmdletBinding()]
+    param (
+        # Sets the log level threashold collected by this logger
+        [Parameter(Mandatory=$false,
+                   Position=0,
+                   ValueFromPipeline=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Set Logging level. Valid Levels are FATAL,ERROR,WARN,INFO,DEBUG")]
+        [string]
+        $logLevel,
+
+        # The Manager of this logger.
+        [Parameter(Mandatory=$true,
+                   Position=1,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Specifies the manager of this logger.")]
+        [LogManager]
+        $LogManager
+    )
+
+    begin {
+    }
+
+    process {
+        $cl = [ConsoleLogger]::new()
+
+        if($loglevel -ne $null){
+            $cl.logLevel = [Logger]::$loglevel
+        }
+        $LogManager.addLogger($cl)
+    }
+
+    end {
+    }
+}
+
 
 Export-ModuleMember -Function *-*
 # Export only the functions using PowerShell standard verb-noun naming.
