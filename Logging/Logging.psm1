@@ -82,8 +82,9 @@ Class SMTPLogger : Logger {
     [string]$sender
     [string[]]$recipients
     [string]$subject
+    [bool]$usessl
     hidden [System.Collections.ArrayList]$messages # Should call log method instead.  Method will check if autoflushlogcount has been reached and flush if necessary.
-    hidden [System.Security.SecureString]$credentials
+    hidden [System.Management.Automation.PSCredential]$credentials
 
     SMTPLogger() {
         Throw "SMTPLogger must be created with required connection parameters."
@@ -133,7 +134,8 @@ Class SMTPLogger : Logger {
                                     -To $This.recipients `
                                     -Credential $This.credentials `
                                     -Subject $This.subject `
-                                    -Body $message -ErrorAction Stop
+                                    -Body $message -ErrorAction Stop `
+                                    -UseSsl:$This.usessl
                 $This.messages.Clear()
             }
             else {
@@ -143,6 +145,7 @@ Class SMTPLogger : Logger {
                                     -To $This.recipients `
                                     -Subject $This.subject `
                                     -Body $message -ErrorAction Stop
+                                    -Usessl:$this.usessl
                 $This.messages.Clear()
             }
         }
@@ -290,6 +293,88 @@ function New-FileLogger {
 function New-SMTPLogger {
     [CmdletBinding()]
     param (
+        # Log Manager for this Logger
+        [Parameter(Mandatory=$true,
+                   Position=0,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Log Manager Object for this Logger")]
+        [Alias("LM")]
+        [LogManager]
+        $LogManager,
+
+        # Logging Threashold
+        [Parameter(Mandatory=$false,
+                   Position=0,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Set Logging level. Valid Levels are FATAL,ERROR,WARN,INFO,DEBUG")]
+        [Alias("LL")]
+        [String]
+        $LogLevel,
+
+        # SMTP Address for your Mail Server
+        [Parameter(Mandatory=$true,
+                   Position=1,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Specify the address to the SMTP server.")]
+        [String]
+        $SMTPServer,
+
+        # SMTP Port for your server.
+        [Parameter(Mandatory=$true,
+                   Position=2,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Specify the port to the SMTP server.")]
+        [int]
+        $Port = 25,
+
+        # Address used for sending email logs
+        [Parameter(Mandatory=$true,
+                   Position=3,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Address used for sending email logs")]
+        [string]
+        $From,
+
+        # Recipents of your email logs
+        [Parameter(Mandatory=$true,
+                   Position=4,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Recipents of your email logs")]
+        [string[]]
+        $To,
+
+        # Subeject Line of your mail message.
+        [Parameter(Mandatory=$true,
+                   Position=5,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Subeject Line of your mail message.")]
+        [string]
+        $Subject,
+
+        # Credentials to authenticate to the mail server.
+        [Parameter(Mandatory=$true,
+                   Position=6,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Subeject Line of your mail message.")]
+        [System.Management.Automation.CredentialAttribute()]
+        $Credentials,
+
+        # Specify to use SSL
+        [Parameter(Mandatory=$false,
+                   Position=7,
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   HelpMessage="Specify to use SSL")]
+        [switch]
+        $UseSsl
 
     )
 
@@ -297,6 +382,14 @@ function New-SMTPLogger {
     }
 
     process {
+        $el = [SMTPLogger]::new($SMTPServer,$Port,$From,$To)
+        if($Credentials){
+            $el.Credentials = $Credentials
+        }
+        $el.usessl = $usessl
+        $el.logLevel = [Logger]::$LogLevel
+        $el.subject = $Subject
+        $LogManager.addLogger($el)
     }
 
     end {
